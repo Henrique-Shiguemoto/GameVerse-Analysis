@@ -19,6 +19,10 @@ In the silver layer, I clean the data a bit, making sure the tables have consist
 
 In the gold layer, tables are joined together for performance of analyses (denormalization) and new tables with aggregated values are created.
 
+# Data Pipeline Overview
+
+![ETLOverview](imgs/etlOverview.png)
+
 # Technologies Used
 
 - Databricks
