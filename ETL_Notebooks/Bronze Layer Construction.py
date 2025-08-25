@@ -16,9 +16,9 @@ from pyspark.sql.types import TimestampType
 
 # COMMAND ----------
 
-# dbutils.fs.mkdirs("/Volumes/workspace/default/raw/_checkpoints/game_logs")
-# dbutils.fs.mkdirs("/Volumes/workspace/default/raw/_checkpoints/player_profiles")
-# dbutils.fs.mkdirs("/Volumes/workspace/default/raw/_checkpoints/purchases")
+dbutils.fs.mkdirs("/Volumes/workspace/default/raw/_checkpoints/game_logs")
+dbutils.fs.mkdirs("/Volumes/workspace/default/raw/_checkpoints/player_profiles")
+dbutils.fs.mkdirs("/Volumes/workspace/default/raw/_checkpoints/purchases")
 
 # COMMAND ----------
 
@@ -87,6 +87,7 @@ bronze_players.writeStream \
 # COMMAND ----------
 
 # MAGIC %sql
+# MAGIC
 # MAGIC SELECT * FROM workspace.default.bronze_players
 
 # COMMAND ----------

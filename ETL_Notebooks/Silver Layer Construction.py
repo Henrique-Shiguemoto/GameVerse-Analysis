@@ -40,10 +40,14 @@ silver_game_logs = (
         expr("""
             transform(Actions, x -> 
                 CASE x
-                    WHEN '1' THEN 'PvP Battle'
-                    WHEN '2' THEN 'Item Crafted'
+                    WHEN '0' THEN 'PvP Battle'
+                    WHEN '1' THEN 'Dungeon Raid'
+                    WHEN '2' THEN 'Crafting'
                     WHEN '3' THEN 'Exploration'
-                    WHEN '4' THEN 'Story'
+                    WHEN '4' THEN 'Trading'
+                    WHEN '5' THEN 'Gathering'
+                    WHEN '6' THEN 'Questing / Story Progression'
+                    WHEN '7' THEN 'Social Interaction'
                     ELSE 'Unknown'
                 END
             )
@@ -79,7 +83,7 @@ silver_players = (
     .withColumnRenamed("acc_creat_date", "AccountCreationDate")
     .withColumnRenamed("gender", "Gender")
     .withColumn("Age", col("age").cast("int"))
-    .withColumn("Age_Bin", 
+    .withColumn("AgeBin", 
         when(col("Age") < 15, "Under 15")
         .when((col("Age") >= 15) & (col("Age") < 25), "15-24")
         .when((col("Age") >= 25) & (col("Age") < 35), "25-34")
@@ -118,12 +122,6 @@ silver_players.write \
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC
-# MAGIC SELECT * FROM bronze_purchases
-
-# COMMAND ----------
-
 silver_purchases = (
     spark.read.table("bronze_purchases")
     .withColumnRenamed("transaction_id", "TransactionID")
@@ -135,13 +133,21 @@ silver_purchases = (
     .withColumn("Timestamp", to_timestamp(col("Timestamp")))
     .withColumn("ItemPrice", col("ItemPrice").cast("double"))
     .withColumn("Item",
-        when(col("Item") == "1", "Sword of Dawn")
-        .when(col("Item") == "2", "Shield of Ages")
-        .when(col("Item") == "3", "Health Potion")
-        .when(col("Item") == "4", "Mana Potion")
-        .when(col("Item") == "5", "100 Gems")
-        .when(col("Item") == "6", "Skin Pack")
-        .when(col("Item") == "7", "Expansion Pass")
+        when(col("Item") == "0", "Loot Box / Mystery Chest")
+        .when(col("Item") == "1", "Potion of Fortune")
+        .when(col("Item") == "2", "Enchantment Scroll")
+        .when(col("Item") == "3", "Revival Token")
+        .when(col("Item") == "4", "Teleportation Rune")
+        .when(col("Item") == "5", "Cosmetic Outfit Box")
+        .when(col("Item") == "6", "Mount Egg")
+        .when(col("Item") == "7", "Pet Summoning Stone")
+        .when(col("Item") == "8", "Crafting Material Bundle")
+        .when(col("Item") == "9", "Treasure Map Fragment")
+        .when(col("Item") == "10", "Skill Tome")
+        .when(col("Item") == "11", "Title Scroll")
+        .when(col("Item") == "12", "Upgrade Protection Charm")
+        .when(col("Item") == "13", "Event Token Pack")
+        .when(col("Item") == "14", "Premium Dye Pack")
         .otherwise("Unknown")
     )
     .withColumn(

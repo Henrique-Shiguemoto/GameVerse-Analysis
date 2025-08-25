@@ -1,5 +1,7 @@
 # GameVerse
 
+![GameVerse Logo](imgs/gameverse_logo.png)
+
 You’re a data engineer/analyst at GameVerse, a mid-sized game studio that runs an online multiplayer RPG. The studio wants to understand how players engage with the game, which features drive retention, and how in-game purchases affect revenue based on the data from 3 months ago to now.
 
 Management has asked you to build a data pipeline in Databricks to process raw data from different sources, then deliver clean datasets for the Analytics team (who will use Tableau/Excel).
@@ -18,6 +20,8 @@ These sources are loaded into Databricks which then are used to create the bronz
 In the silver layer, I clean the data a bit, making sure the tables have consistent column names, converting each column to its correct data type, removing possible duplicate rows, etc.
 
 In the gold layer, tables are joined together for performance of analyses (denormalization) and new tables with aggregated values are created.
+
+The notebooks used to create these layers are in the folder <code>ETL_Notebooks</code>.
 
 # Data Pipeline Overview
 
