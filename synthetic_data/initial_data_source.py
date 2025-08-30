@@ -15,7 +15,41 @@ OUTPUT_DIR = "synthetic_data"
 fake = Faker()
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# --- Helper: Vectorized Weighted Day-of-Week Random Time ---
+# Mon=0 ... Sun=6
+dow_weights = np.array([3, 2, 1, 2, 4, 7, 6], dtype=float)  # weekdays lighter, weekends heavier
+dow_weights = dow_weights / dow_weights.sum()
+
+def weighted_random_time_fast(start_ts, end_ts, size, dow_weights):
+    """Generate biased timestamps quickly without rejection sampling."""
+    start_dt = datetime.fromtimestamp(start_ts)
+    end_dt = datetime.fromtimestamp(end_ts)
+
+    num_days = (end_dt.date() - start_dt.date()).days + 1
+    all_days = [start_dt.date() + timedelta(days=i) for i in range(num_days)]
+    day_of_week = np.array([d.weekday() for d in all_days])
+
+    # Normalize weights by weekday
+    day_weights = np.array([dow_weights[d] for d in day_of_week], dtype=float)
+    day_weights /= day_weights.sum()
+
+    # Step 1: pick days (biased)
+    chosen_days = np.random.choice(all_days, size=size, p=day_weights)
+
+    # Step 2: random seconds within the chosen day
+    random_seconds = np.random.randint(0, 24*60*60, size=size)
+
+    # Step 3: convert back to timestamps
+    times = np.array([
+        int((datetime.combine(day, datetime.min.time()) + timedelta(seconds=int(sec))).timestamp())
+        for day, sec in zip(chosen_days, random_seconds)
+    ], dtype=int)
+
+    return times
+
+# =========================
 # Player Profiles
+# =========================
 mean_age = 24
 sigma = 0.4
 ages = np.random.lognormal(mean=np.log(mean_age), sigma=sigma, size=NUM_PLAYERS)
@@ -56,7 +90,9 @@ with open(os.path.join(OUTPUT_DIR, "player_profiles.csv"), "w", newline="", enco
 
 print("player_profiles.csv written!")
 
+# =========================
 # Player Sessions
+# =========================
 player_ids = [f"P{i+1:05d}" for i in range(NUM_PLAYERS)]
 player_indexes = list(range(NUM_PLAYERS))
 
@@ -73,8 +109,8 @@ end_ts = int(end_date.timestamp())
 player_indices = np.random.choice(player_indexes, size=NUM_SESSIONS, p=activity_weights)
 player_ids_sessions = [player_ids[int(idx)] for idx in player_indices]
 
-# Generate login times
-login_times = np.random.randint(start_ts, end_ts, size=NUM_SESSIONS)
+# Generate login times with weekend bias (fast)
+login_times = weighted_random_time_fast(start_ts, end_ts, NUM_SESSIONS, dow_weights)
 
 # Assign session lengths
 weights_for_players = activity_weights[player_indices]
@@ -88,27 +124,46 @@ logout_times = login_times + (session_minutes * 60)
 # Platform distribution
 platforms = np.random.choice([1, 2, 3, 4], size=NUM_SESSIONS, p=[7/14, 3/14, 3/14, 1/14])
 
-# Actions distribution
+# =========================
+# Actions distribution (global)
+# =========================
+
+# 0 - 'PvP Battle'
+# 1 - 'Dungeon Raid'
+# 2 - 'Crafting'
+# 3 - 'Exploration'
+# 4 - 'Trading'
+# 5 - 'Gathering'
+# 6 - 'Questing / Story Progression'
+# 7 - 'Social Interaction'
+
 actions = list(range(8))
-action_prob = np.array([random.randint(1, 100) for _ in actions])
-action_prob = action_prob / action_prob.sum()
-actions_matrix = np.random.choice(actions, size=(NUM_SESSIONS, 8), p=action_prob)
+action_weights = np.array([20, 30, 5, 15, 10, 8, 7, 25], dtype=float)
+action_prob = action_weights / action_weights.sum()
 
 with open(os.path.join(OUTPUT_DIR, "game_logs.json"), "w", encoding="utf-8") as f:
     for i in range(NUM_SESSIONS):
+        # Number of actions depends on session length (~1 per 10 min)
+        n_actions = np.random.poisson(lam=session_minutes[i] / 10)
+        n_actions = max(1, min(n_actions, 50))  # keep reasonable bounds
+
+        actions_chosen = np.random.choice(actions, size=n_actions, p=action_prob).tolist()
+
         session = {
             "_player_id": str(player_ids_sessions[i]),
             "_session_id": f"S{i+1:06d}",
             "_login": datetime.fromtimestamp(int(login_times[i])).isoformat(),
             "_logout": datetime.fromtimestamp(int(logout_times[i])).isoformat(),
-            "_action": [int(a) for a in set(actions_matrix[i])],
+            "_action": actions_chosen,
             "_platform": int(platforms[i])
         }
         f.write(json.dumps(session) + "\n")
 
 print("game_logs.json written!")
 
+# =========================
 # Player Purchases
+# =========================
 items = list(range(15))
 item_weights = [random.randint(1, 100) for _ in items]
 item_prob = np.array(item_weights) / sum(item_weights)
@@ -117,7 +172,9 @@ item_prices = [round(random.uniform(0.99, 49.99), 2) for _ in items]
 chosen_items = np.random.choice(items, size=NUM_PURCHASES, p=item_prob)
 pmethods = np.random.choice([1, 2, 3], size=NUM_PURCHASES, p=[5/9, 1/9, 3/9])
 purchase_players = np.random.choice(player_ids, size=NUM_PURCHASES, p=activity_weights)
-purchase_times = np.random.randint(start_ts, end_ts, size=NUM_PURCHASES)
+
+# Purchase times with weekend bias (fast)
+purchase_times = weighted_random_time_fast(start_ts, end_ts, NUM_PURCHASES, dow_weights)
 
 with open(os.path.join(OUTPUT_DIR, "purchases.csv"), "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
